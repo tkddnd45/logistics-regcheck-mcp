@@ -13,6 +13,16 @@ const PORT = process.env.PORT || 3000;
 
 if (!VWORLD_KEY) console.warn("[경고] VWORLD_KEY 환경변수가 설정되지 않았습니다.");
 if (!LAW_OC) console.warn("[경고] LAW_OC 환경변수가 설정되지 않았습니다.");
+// 값 자체는 로그에 남기지 않되, 앞뒤 공백·길이 등으로 "복붙 실수"를 바로 알 수 있게 한다.
+function describeSecret(name, val) {
+  if (!val) return `${name}: (비어있음)`;
+  const trimmed = val.trim();
+  const hasWhitespace = trimmed !== val;
+  return `${name}: 길이=${val.length}자, 앞2자=${val.slice(0, 2)}, 뒤2자=${val.slice(-2)}, 앞뒤공백포함=${hasWhitespace}`;
+}
+console.log("[환경변수 점검]", describeSecret("VWORLD_KEY", VWORLD_KEY));
+console.log("[환경변수 점검]", describeSecret("LAW_OC", LAW_OC));
+console.log("[환경변수 점검] VWORLD_DOMAIN:", VWORLD_DOMAIN || "(비어있음)");
 
 /* ------------------------------------------------------------------ */
 /*  용도지역 명칭 목록 (브이월드 응답 속성값에서 실제 용도지역명을      */
@@ -60,25 +70,37 @@ async function vworldGeocode(address) {
     + "&address=" + encodeURIComponent(address)
     + "&refine=true&simple=false&format=json&type=parcel"
     + "&key=" + VWORLD_KEY + (VWORLD_DOMAIN ? "&domain=" + encodeURIComponent(VWORLD_DOMAIN) : "");
+  console.log("[vworldGeocode] 요청 URL (키 제외):", url.replace(VWORLD_KEY, "***"));
   const res = await fetch(url);
+  console.log("[vworldGeocode] 응답 상태:", res.status);
+  const text = await res.text();
+  console.log("[vworldGeocode] 응답 본문 앞부분:", text.slice(0, 500));
   if (!res.ok) throw new Error(`브이월드 geocode HTTP ${res.status}`);
-  return res.json();
+  return JSON.parse(text);
 }
 async function vworldData(layerId, extraParams) {
   let url = "https://api.vworld.kr/req/data?service=data&version=2.0&request=GetFeature&format=json&crs=epsg:4326"
     + "&size=5&page=1&data=" + layerId + "&geometry=false&attribute=true"
     + "&key=" + VWORLD_KEY + (VWORLD_DOMAIN ? "&domain=" + encodeURIComponent(VWORLD_DOMAIN) : "");
   if (extraParams) url += extraParams;
+  console.log("[vworldData] 요청 URL (키 제외):", url.replace(VWORLD_KEY, "***"));
   const res = await fetch(url);
+  console.log("[vworldData] 응답 상태:", res.status);
+  const text = await res.text();
+  console.log("[vworldData] 응답 본문 앞부분:", text.slice(0, 500));
   if (!res.ok) throw new Error(`브이월드 data HTTP ${res.status}`);
-  return res.json();
+  return JSON.parse(text);
 }
 async function vworldLandPrice(pnu) {
   const url = "https://api.vworld.kr/ned/data/getIndvdLandPriceAttr?pnu=" + encodeURIComponent(pnu)
     + "&format=json&numOfRows=50&pageNo=1&key=" + VWORLD_KEY + (VWORLD_DOMAIN ? "&domain=" + encodeURIComponent(VWORLD_DOMAIN) : "");
+  console.log("[vworldLandPrice] 요청 URL (키 제외):", url.replace(VWORLD_KEY, "***"));
   const res = await fetch(url);
+  console.log("[vworldLandPrice] 응답 상태:", res.status);
+  const text = await res.text();
+  console.log("[vworldLandPrice] 응답 본문 앞부분:", text.slice(0, 500));
   if (!res.ok) throw new Error(`브이월드 공시지가 HTTP ${res.status}`);
-  return res.json();
+  return JSON.parse(text);
 }
 
 async function lookupParcelViaVWorld(address) {
@@ -127,16 +149,24 @@ async function lookupParcelViaVWorld(address) {
 async function lawSearchOrdin(query) {
   const url = "https://www.law.go.kr/DRF/lawSearch.do?OC=" + encodeURIComponent(LAW_OC)
     + "&target=ordin&type=JSON&display=20&query=" + encodeURIComponent(query);
+  console.log("[lawSearchOrdin] 요청 URL (OC 제외):", url.replace(encodeURIComponent(LAW_OC), "***"));
   const res = await fetch(url);
+  console.log("[lawSearchOrdin] 응답 상태:", res.status);
+  const text = await res.text();
+  console.log("[lawSearchOrdin] 응답 본문 앞부분:", text.slice(0, 500));
   if (!res.ok) throw new Error(`법제처 검색 HTTP ${res.status}`);
-  return res.json();
+  return JSON.parse(text);
 }
 async function lawServiceOrdin(mst) {
   const url = "https://www.law.go.kr/DRF/lawService.do?OC=" + encodeURIComponent(LAW_OC)
     + "&target=ordin&type=JSON&MST=" + encodeURIComponent(mst);
+  console.log("[lawServiceOrdin] 요청 URL (OC 제외):", url.replace(encodeURIComponent(LAW_OC), "***"));
   const res = await fetch(url);
+  console.log("[lawServiceOrdin] 응답 상태:", res.status);
+  const text = await res.text();
+  console.log("[lawServiceOrdin] 응답 본문 앞부분:", text.slice(0, 500));
   if (!res.ok) throw new Error(`법제처 본문조회 HTTP ${res.status}`);
-  return res.json();
+  return JSON.parse(text);
 }
 // 응답 JSON 구조가 불확실한 데다 검색결과가 1건이면 배열이 아니라 단일
 // 객체로 오는 경우가 있어, 재귀적으로 훑어서 해당 필드를 가진 객체를 직접 찾는다.
